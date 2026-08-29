@@ -22,6 +22,8 @@ const demoTravellers = [
   { id: 12, name: 'Sneha Verma', type: 'Adult', group: 'Friends' },
 ]
 
+const getDemoTravellers = (count) => demoTravellers.slice(0, count)
+
 function Brand() {
   return (
     <div className="flex items-center gap-2.5" aria-label="RailTogether">
@@ -65,20 +67,32 @@ function TravellerStepper({ value, onChange }) {
 function JourneyDetails({ onContinue }) {
   const [travellers, setTravellers] = useState(6)
   const [form, setForm] = useState({ from: '', to: '', date: '' })
+  const [journeyError, setJourneyError] = useState('')
   const [dateError, setDateError] = useState('')
   const today = new Date()
   const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
   const update = (field) => (event) => {
     setForm({ ...form, [field]: event.target.value })
+    if (field === 'from' || field === 'to') setJourneyError('')
     if (field === 'date') setDateError('')
   }
   const submit = (event) => {
     event.preventDefault()
+    const from = form.from.trim()
+    const to = form.to.trim()
+    if (!from || !to) {
+      setJourneyError('Please enter both departure and destination.')
+      return
+    }
+    if (from.toLocaleLowerCase() === to.toLocaleLowerCase()) {
+      setJourneyError('Departure and destination must be different.')
+      return
+    }
     if (form.date && form.date < localToday) {
       setDateError('Please select a future travel date.')
       return
     }
-    onContinue()
+    onContinue(travellers)
   }
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl px-5 py-5 sm:px-7">
@@ -90,7 +104,7 @@ function JourneyDetails({ onContinue }) {
       </section>
       <form onSubmit={submit} className="space-y-5" noValidate>
         <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">From station</span><input required value={form.from} onChange={update('from')} placeholder="e.g. New Delhi (NDLS)" className="focus-ring min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-base placeholder:text-slate-400" /></label>
-        <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">To station</span><input required value={form.to} onChange={update('to')} placeholder="e.g. Mumbai Central (MMCT)" className="focus-ring min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-base placeholder:text-slate-400" /></label>
+        <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">To station</span><input required value={form.to} onChange={update('to')} placeholder="e.g. Mumbai Central (MMCT)" aria-invalid={Boolean(journeyError)} aria-describedby={journeyError ? 'journey-error' : undefined} className="focus-ring min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-base placeholder:text-slate-400" />{journeyError && <p id="journey-error" role="alert" className="mt-2 text-sm font-semibold text-red-700">{journeyError}</p>}</label>
         <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">Journey date</span><input required type="date" min={localToday} value={form.date} onChange={update('date')} aria-invalid={Boolean(dateError)} aria-describedby={dateError ? 'journey-date-error' : undefined} className={`focus-ring min-h-14 w-full rounded-xl border bg-white px-4 text-base ${dateError ? 'border-red-500' : 'border-stone-300'}`} />{dateError && <p id="journey-date-error" role="alert" className="mt-2 text-sm font-semibold text-red-700">{dateError}</p>}</label>
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-4"><div><label htmlFor="travellers" className="block text-sm font-bold text-slate-700">Number of travellers</label><p className="mt-1 text-sm text-slate-500">Include everyone in your group</p></div><TravellerStepper value={travellers} onChange={setTravellers} /></div>
         {travellers > 6 && <div role="status" className="rounded-2xl border border-rail-100 bg-rail-50 p-4 text-sm leading-6 text-rail-900"><span className="mr-2 font-bold" aria-hidden="true">✦</span>Your group has more than 6 travellers. We'll help coordinate your bookings so your group can stay together as much as possible.</div>}
@@ -101,11 +115,11 @@ function JourneyDetails({ onContinue }) {
   )
 }
 
-function Travellers({ onPreferences }) {
-  const [travellers, setTravellers] = useState(demoTravellers)
+function Travellers({ onPreferences, initialTravellers, targetTravellerCount }) {
+  const [travellers, setTravellers] = useState(initialTravellers)
   const [showForm, setShowForm] = useState(false)
   const [newTraveller, setNewTraveller] = useState({ name: '', age: '', type: 'Adult', group: '' })
-  const [nextId, setNextId] = useState(demoTravellers.length + 1)
+  const [nextId, setNextId] = useState(initialTravellers.length + 1)
 
   const updateNewTraveller = (field) => (event) => setNewTraveller({ ...newTraveller, [field]: event.target.value })
   const addTraveller = (event) => {
@@ -129,13 +143,13 @@ function Travellers({ onPreferences }) {
       <section aria-label="Journey summary" className="rounded-2xl border border-rail-100 bg-rail-50 p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-rail-700">Your journey · demo data</p>
         <p className="mt-2 font-bold text-slate-900">Hyderabad <span className="px-1 text-rail-700" aria-hidden="true">→</span> Vijayawada</p>
-        <p className="mt-1 text-sm text-slate-600">15 September 2026 <span className="px-1" aria-hidden="true">•</span> 12 travellers</p>
+        <p className="mt-1 text-sm text-slate-600">15 September 2026 <span className="px-1" aria-hidden="true">•</span> {travellers.length} travellers</p>
       </section>
 
       <section className="pt-7" aria-labelledby="traveller-list-heading">
         <div className="flex items-center justify-between gap-3">
           <div><h2 id="traveller-list-heading" className="text-lg font-extrabold text-slate-900">Travellers</h2><p className="mt-1 text-sm text-slate-500">All names shown are synthetic demo data.</p></div>
-          <output className="shrink-0 rounded-full bg-rail-100 px-3 py-1.5 text-sm font-bold text-rail-900" aria-live="polite">{travellers.length} / 12 travellers added ✓</output>
+          <output className="shrink-0 rounded-full bg-rail-100 px-3 py-1.5 text-sm font-bold text-rail-900" aria-live="polite">{travellers.length} / {targetTravellerCount} travellers added ✓</output>
         </div>
         <div className="mt-4 grid gap-3">
           {travellers.map((traveller) => (
@@ -160,7 +174,7 @@ function Travellers({ onPreferences }) {
         </form>}
       </section>
 
-      <section className="mt-8 space-y-3"><p className="rounded-xl bg-amber-50 p-3 text-center text-xs leading-5 text-amber-900">Demo data only — no real passenger information is used.</p><button type="button" onClick={onPreferences} className="focus-ring flex min-h-14 w-full items-center justify-center rounded-2xl bg-rail-700 px-5 text-base font-bold text-white shadow-soft transition hover:bg-rail-900 active:scale-[0.99]">Set Group Preferences <span className="ml-2 text-xl" aria-hidden="true">→</span></button></section>
+      <section className="mt-8 space-y-3"><p className="rounded-xl bg-amber-50 p-3 text-center text-xs leading-5 text-amber-900">Demo data only — no real passenger information is used.</p><button type="button" onClick={() => onPreferences(travellers)} className="focus-ring flex min-h-14 w-full items-center justify-center rounded-2xl bg-rail-700 px-5 text-base font-bold text-white shadow-soft transition hover:bg-rail-900 active:scale-[0.99]">Set Group Preferences <span className="ml-2 text-xl" aria-hidden="true">→</span></button></section>
       <footer className="mt-10 border-t border-stone-200 pt-5 text-center text-xs leading-5 text-slate-500">Hackathon prototype • Uses synthetic data • Not affiliated with IRCTC or Indian Railways</footer>
     </main>
   )
@@ -237,9 +251,9 @@ const mockTrains = [
   { id: 'jan-shatabdi', name: 'Jan Shatabdi', time: '06:30 AM → 12:45 PM', duration: '6h 15m', availability: 'Good', best: false, reason: 'Good group availability, but family clusters are slightly more spread out.' },
 ]
 
-function TrainSelection({ onSelect, preferences }) {
+function TrainSelection({ onSelect, passengers, preferences }) {
   const [optimizing, setOptimizing] = useState(null)
-  const trainOptions = mockTrains.map((train) => ({ ...train, result: optimizeSeats({ passengers: demoTravellers, preferences, availableSeats: getSyntheticSeatsForTrain(train.id) }) }))
+  const trainOptions = mockTrains.map((train) => ({ ...train, result: optimizeSeats({ passengers, preferences, availableSeats: getSyntheticSeatsForTrain(train.id) }) }))
   const chooseTrain = (train) => {
     setOptimizing(train.id)
     window.setTimeout(() => onSelect(train, train.result), 1200)
@@ -248,7 +262,7 @@ function TrainSelection({ onSelect, preferences }) {
   return <main className="mx-auto min-h-screen w-full max-w-xl px-5 py-5 sm:px-7">
     <header className="flex items-center justify-between"><Brand /><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Simulated</span></header>
     <section className="pt-10 pb-6"><p className="text-sm font-bold text-rail-700">STEP 4 OF 6</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Choose your journey</h1><p className="mt-3 text-base leading-6 text-slate-600">We've compared the simulated seat availability for your group.</p></section>
-    <section aria-label="Journey summary" className="rounded-2xl border border-rail-100 bg-rail-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-rail-700">Synthetic journey data</p><p className="mt-2 font-bold text-slate-900">Hyderabad <span className="px-1 text-rail-700" aria-hidden="true">→</span> Vijayawada</p><p className="mt-1 text-sm text-slate-600">15 September 2026 <span className="px-1" aria-hidden="true">•</span> 12 travellers</p></section>
+    <section aria-label="Journey summary" className="rounded-2xl border border-rail-100 bg-rail-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-rail-700">Synthetic journey data</p><p className="mt-2 font-bold text-slate-900">Hyderabad <span className="px-1 text-rail-700" aria-hidden="true">→</span> Vijayawada</p><p className="mt-1 text-sm text-slate-600">15 September 2026 <span className="px-1" aria-hidden="true">•</span> {passengers.length} travellers</p></section>
     <section className="mt-6 grid gap-4" aria-label="Simulated train choices">
       {trainOptions.map((train) => <article key={train.id} className={`rounded-2xl border bg-white p-5 shadow-sm ${train.best ? 'border-rail-500 ring-2 ring-rail-100' : 'border-stone-200'}`}>
         <div className="flex items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-extrabold text-slate-900">{train.name}</h2>{train.best && <span className="rounded-full bg-rail-700 px-2.5 py-1 text-xs font-bold text-white">Best for your group</span>}</div><p className="mt-2 font-semibold text-slate-700">{train.time}</p><p className="mt-1 text-sm text-slate-500">{train.duration}</p></div><div className="rounded-xl bg-rail-50 px-3 py-2 text-center"><span className="block text-xl font-extrabold text-rail-900">{train.result.compatibilityScore}%</span><span className="block text-[11px] font-bold text-rail-700">GROUP FIT</span></div></div>
@@ -278,7 +292,7 @@ function JourneyReady({ train, result, onStartAgain }) {
   const separationLabel = result.coachesUsed > 1 ? 'Separation minimized' : 'All in one coach'
   return <main className="mx-auto min-h-screen w-full max-w-xl px-5 py-5 sm:px-7">
     <header className="flex items-center justify-between"><Brand /><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Simulated</span></header>
-    <section className="pt-10 text-center"><p className="text-sm font-bold text-rail-700">YOUR DEMO PLAN</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Your group journey is ready!</h1><p className="mt-3 text-base font-semibold text-slate-700">Hyderabad <span className="px-1 text-rail-700" aria-hidden="true">→</span> Vijayawada</p><p className="mt-1 text-sm text-slate-500">15 September 2026 <span className="px-1" aria-hidden="true">•</span> 12 travellers <span className="px-1" aria-hidden="true">•</span> {train.name}</p></section>
+    <section className="pt-10 text-center"><p className="text-sm font-bold text-rail-700">YOUR DEMO PLAN</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">Your group journey is ready!</h1><p className="mt-3 text-base font-semibold text-slate-700">Hyderabad <span className="px-1 text-rail-700" aria-hidden="true">→</span> Vijayawada</p><p className="mt-1 text-sm text-slate-500">15 September 2026 <span className="px-1" aria-hidden="true">•</span> {seats.length} travellers <span className="px-1" aria-hidden="true">•</span> {train.name}</p></section>
     <section className="mt-7 rounded-3xl bg-rail-900 p-6 text-center text-white shadow-soft"><p className="text-sm font-bold uppercase tracking-wide text-rail-100">Group compatibility <span className="ml-1 rounded bg-white/15 px-2 py-1 text-[10px]">SIMULATION</span></p><p className="mt-2 text-6xl font-extrabold tracking-tighter">{result.compatibilityScore}%</p><p className="mt-1 text-lg font-bold">Group Compatibility</p><p className="mx-auto mt-4 max-w-sm text-sm leading-5 text-rail-100">{resultExplanation}</p><p className="mt-3 text-xs text-rail-100">Calculated locally from invented seat data and your chosen preferences.</p></section>
     <section aria-label="Arrangement summary" className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-xl border border-stone-200 bg-white p-3 text-center shadow-sm"><p className="text-lg font-extrabold text-slate-900">{seats.length}</p><p className="text-xs font-semibold text-slate-500">travellers</p></div><div className="rounded-xl border border-stone-200 bg-white p-3 text-center shadow-sm"><p className="text-lg font-extrabold text-slate-900">{result.coachesUsed}</p><p className="text-xs font-semibold text-slate-500">coaches used</p></div><div className="rounded-xl border border-rail-100 bg-rail-50 p-3 text-center shadow-sm"><p className="text-sm font-extrabold leading-5 text-rail-900">{separationLabel}</p><p className="mt-1 text-xs font-semibold text-rail-700">simulation result</p></div></section>
     <section className="mt-6 rounded-2xl border border-rail-100 bg-rail-50 p-4"><h2 className="font-extrabold text-rail-900">Your preferences, met</h2><ul className="mt-3 grid grid-cols-1 gap-2 text-sm font-medium text-rail-900 sm:grid-cols-2">{result.satisfiedPreferences.map((item) => <li key={item}><span className="mr-2 font-bold" aria-hidden="true">✓</span>{item}</li>)}{result.unmetPreferences.map((item) => <li key={item} className="text-amber-900"><span className="mr-2 font-bold" aria-hidden="true">△</span>{item} not fully met</li>)}</ul></section>
@@ -295,13 +309,15 @@ export default function App() {
   const [screen, setScreen] = useState('home')
   const [selectedTrain, setSelectedTrain] = useState(null)
   const [selectedResult, setSelectedResult] = useState(null)
+  const [journeyTravellers, setJourneyTravellers] = useState(getDemoTravellers(6))
+  const [targetTravellerCount, setTargetTravellerCount] = useState(6)
   const [journeyPreferences, setJourneyPreferences] = useState({ sameCoach: true, familiesTogether: true, childrenNearFamily: true, seniorsNearFamily: true, priority: 'families together' })
   if (screen === 'home') return <Home onStart={() => setScreen('journey')} />
-  if (screen === 'journey') return <JourneyDetails onContinue={() => setScreen('travellers')} />
-  if (screen === 'travellers') return <Travellers onPreferences={() => setScreen('preferences')} />
+  if (screen === 'journey') return <JourneyDetails onContinue={(travellerCount) => { setTargetTravellerCount(travellerCount); setJourneyTravellers(getDemoTravellers(travellerCount)); setScreen('travellers') }} />
+  if (screen === 'travellers') return <Travellers initialTravellers={journeyTravellers} targetTravellerCount={targetTravellerCount} onPreferences={(travellers) => { setJourneyTravellers(travellers); setScreen('preferences') }} />
   if (screen === 'preferences') return <GroupPreferences initialPreferences={journeyPreferences} onFindArrangement={(preferences) => { setJourneyPreferences(preferences); setScreen('train-selection') }} />
-  if (screen === 'train-selection') return <TrainSelection preferences={journeyPreferences} onSelect={(train, result) => { setSelectedTrain(train); setSelectedResult(result); setScreen('ready') }} />
+  if (screen === 'train-selection') return <TrainSelection passengers={journeyTravellers} preferences={journeyPreferences} onSelect={(train, result) => { setSelectedTrain(train); setSelectedResult(result); setScreen('ready') }} />
   const fallbackTrain = selectedTrain || mockTrains[0]
-  const fallbackResult = selectedResult || optimizeSeats({ passengers: demoTravellers, preferences: journeyPreferences, availableSeats: getSyntheticSeatsForTrain(fallbackTrain.id) })
+  const fallbackResult = selectedResult || optimizeSeats({ passengers: journeyTravellers, preferences: journeyPreferences, availableSeats: getSyntheticSeatsForTrain(fallbackTrain.id) })
   return <JourneyReady train={fallbackTrain} result={fallbackResult} onStartAgain={() => { setSelectedTrain(null); setSelectedResult(null); setScreen('home') }} />
 }
