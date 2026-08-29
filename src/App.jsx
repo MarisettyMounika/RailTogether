@@ -65,8 +65,21 @@ function TravellerStepper({ value, onChange }) {
 function JourneyDetails({ onContinue }) {
   const [travellers, setTravellers] = useState(6)
   const [form, setForm] = useState({ from: '', to: '', date: '' })
-  const update = (field) => (event) => setForm({ ...form, [field]: event.target.value })
-  const submit = (event) => { event.preventDefault(); onContinue() }
+  const [dateError, setDateError] = useState('')
+  const today = new Date()
+  const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+  const update = (field) => (event) => {
+    setForm({ ...form, [field]: event.target.value })
+    if (field === 'date') setDateError('')
+  }
+  const submit = (event) => {
+    event.preventDefault()
+    if (form.date && form.date < localToday) {
+      setDateError('Please select a future travel date.')
+      return
+    }
+    onContinue()
+  }
   return (
     <main className="mx-auto min-h-screen w-full max-w-xl px-5 py-5 sm:px-7">
       <header className="flex items-center justify-between"><Brand /><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">Simulated</span></header>
@@ -78,7 +91,7 @@ function JourneyDetails({ onContinue }) {
       <form onSubmit={submit} className="space-y-5" noValidate>
         <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">From station</span><input required value={form.from} onChange={update('from')} placeholder="e.g. New Delhi (NDLS)" className="focus-ring min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-base placeholder:text-slate-400" /></label>
         <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">To station</span><input required value={form.to} onChange={update('to')} placeholder="e.g. Mumbai Central (MMCT)" className="focus-ring min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-base placeholder:text-slate-400" /></label>
-        <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">Journey date</span><input required type="date" value={form.date} onChange={update('date')} className="focus-ring min-h-14 w-full rounded-xl border border-stone-300 bg-white px-4 text-base" /></label>
+        <label className="block"><span className="mb-2 block text-sm font-bold text-slate-700">Journey date</span><input required type="date" min={localToday} value={form.date} onChange={update('date')} aria-invalid={Boolean(dateError)} aria-describedby={dateError ? 'journey-date-error' : undefined} className={`focus-ring min-h-14 w-full rounded-xl border bg-white px-4 text-base ${dateError ? 'border-red-500' : 'border-stone-300'}`} />{dateError && <p id="journey-date-error" role="alert" className="mt-2 text-sm font-semibold text-red-700">{dateError}</p>}</label>
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-4"><div><label htmlFor="travellers" className="block text-sm font-bold text-slate-700">Number of travellers</label><p className="mt-1 text-sm text-slate-500">Include everyone in your group</p></div><TravellerStepper value={travellers} onChange={setTravellers} /></div>
         {travellers > 6 && <div role="status" className="rounded-2xl border border-rail-100 bg-rail-50 p-4 text-sm leading-6 text-rail-900"><span className="mr-2 font-bold" aria-hidden="true">✦</span>Your group has more than 6 travellers. We'll help coordinate your bookings so your group can stay together as much as possible.</div>}
         <button type="submit" className="focus-ring flex min-h-14 w-full items-center justify-center rounded-2xl bg-rail-700 px-5 text-base font-bold text-white shadow-soft transition hover:bg-rail-900 active:scale-[0.99]">Continue <span className="ml-2 text-xl" aria-hidden="true">→</span></button>
